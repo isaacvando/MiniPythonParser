@@ -46,6 +46,14 @@ main = hspec $ do
             -- it "beginning with a number is invalid" $ do
             --     parsePython "89badvar" `shouldSatisfy` isLeft
 
+            it "variable names may not be reserved words" $ do
+                parsePython "if" `shouldSatisfy` isLeft
+
+            it "basic assignment" $ do
+                parsePython "foo = 10.7" `shouldBe` (Right $ Start [Assign "=" [Var "foo", Num "10.7"]])
+
+            
+
         -- describe "errors" $ do
         --     it "needlessly indented statement" $ do
         --         parsePython " 1 + 2" `shouldSatisfy` isLeft

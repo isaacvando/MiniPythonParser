@@ -21,8 +21,16 @@ pythonFile = do
 
 statement :: Parser Content
 statement = do
-    s <- try variable <|> arithmetic
+    s <- try assignment <|> arithmetic
     return s 
+
+assignment :: Parser Content
+assignment = try (do
+    v <- variable <* hspace
+    op <- assignOperator <* hspace
+    exp <- arithmetic
+    return $ Assign op [v, exp])
+    <|> variable
 
 variable :: Parser Content
 variable = do
@@ -48,3 +56,6 @@ number = do
 
 arithOperator :: Parser Char
 arithOperator = oneOf "+-/*%"
+
+assignOperator :: Parser String
+assignOperator = string "=" <|> string "+=" <|> string "-=" <|> string "*=" <|> string "/=" <?> "assignment operator"
