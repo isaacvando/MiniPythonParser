@@ -37,10 +37,13 @@ main = hspec $ do
                 parsePython "x * 2" `shouldBe` (Right $ Start [Arith '*' [Var "x", Num "2"]])
 
             it "bigger operation with variable" $ do
-                parsePython "(1 + x) + 3)" `shouldBe` (Right $ Start [Arith '+' [Arith '+' [Num "1", Var "x"], Num "3"]])
+                parsePython "((1 + x) + 3)" `shouldBe` (Right $ Start [Arith '+' [Arith '+' [Num "1", Var "x"], Num "3"]])
 
             it "operation with only variables" $ do
                 parsePython "x * y + z" `shouldBe` (Right $ Start [Arith '*' [Var "x", Arith '+' [Var "y", Var "z"]]])
+
+            it "malformed parens fails" $ do
+                parsePython "(x + y) + y)" `shouldSatisfy` isLeft
 
         describe "assignment" $ do
             it "variable declaration" $ do

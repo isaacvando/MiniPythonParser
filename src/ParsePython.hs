@@ -19,11 +19,12 @@ parsePython input = case parse pythonFile "" input of
 pythonFile :: Parser Content
 pythonFile = do
     s <- many $ statement <* space
+    end
     return $ Start s
 
 statement :: Parser Content
 statement = do
-    s <- try (arithmetic <* end) <|> try (assignment <* end) <|> (variable <* end)
+    s <- try (arithmetic <* end) <|> (assignment <* end)
     return s 
 
 assignment :: Parser Content
@@ -48,6 +49,7 @@ arithmetic = (try (do
     return $ Arith op [a1, a2]))
     <|> (char '(' *> arithmetic <* char ')')
     <|> number
+    <|> variable
 
 number :: Parser Content
 number = do
