@@ -33,6 +33,15 @@ main = hspec $ do
             it "statements on seperate lines" $ do
                 parsePython "1 + 2\n2 + 9" `shouldBe` (Right $ Start [Arith '+' [Num "1", Num "2"], Arith '+' [Num "2", Num "9"]])
 
+            it "operation containing a variable" $ do
+                parsePython "x * 2" `shouldBe` (Right $ Start [Arith '*' [Var "x", Num "2"]])
+
+            it "bigger operation with variable" $ do
+                parsePython "(1 + x) + 3)" `shouldBe` (Right $ Start [Arith '+' [Arith '+' [Num "1", Var "x"], Num "3"]])
+
+            it "operation with only variables" $ do
+                parsePython "x * y + z" `shouldBe` (Right $ Start [Arith '*' [Var "x", Arith '+' [Var "y", Var "z"]]])
+
         describe "assignment" $ do
             it "variable declaration" $ do
                 parsePython "myVar" `shouldBe` (Right $ Start [Var "myVar"])
@@ -46,12 +55,20 @@ main = hspec $ do
             -- it "beginning with a number is invalid" $ do
             --     parsePython "89badvar" `shouldSatisfy` isLeft
 
-            it "variable names may not be reserved words" $ do
-                parsePython "if" `shouldSatisfy` isLeft
+            -- it "variable names may not be reserved words" $ do
+            --     parsePython "if" `shouldSatisfy` isLeft
 
             it "basic assignment" $ do
                 parsePython "foo = 10.7" `shouldBe` (Right $ Start [Assign "=" [Var "foo", Num "10.7"]])
 
+            it "assignment with complex arithmetic expression" $ do
+                parsePython "snake_var = ((90 - 90) % 7)" `shouldBe` (Right $ Start [Assign "=" [Var "snake_var", Arith '%' [Arith '-' [Num "90", Num "90"], Num "7"]]])
+
+            it "plus equals" $ do
+                parsePython "x += 7" `shouldBe` (Right $ Start [Assign "+=" [Var "x", Num "7"]])
+
+            it "variable set to variable" $ do
+                parsePython "y = z" `shouldBe` (Right $ Start [Assign "=" [Var "y", Var "z"]])
             
 
         -- describe "errors" $ do

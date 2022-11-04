@@ -3,6 +3,8 @@ module ParsePython where
 import Text.Megaparsec
 import Text.Megaparsec.Char
 import Data.Void
+import Control.Monad (void)
+import Control.Monad.Fail -- temporary
 
 type Parser = Parsec Void String
 
@@ -21,26 +23,26 @@ pythonFile = do
 
 statement :: Parser Content
 statement = do
-    s <- try assignment <|> arithmetic
+    s <- try (arithmetic <* end) <|> try (assignment <* end) <|> (variable <* end)
     return s 
 
 assignment :: Parser Content
-assignment = try (do
+assignment = do
     v <- variable <* hspace
     op <- assignOperator <* hspace
-    exp <- arithmetic
-    return $ Assign op [v, exp])
-    <|> variable
+    exp <- try arithmetic <|> variable
+    return $ Assign op [v, exp]
 
 variable :: Parser Content
 variable = do
     first <- char '_' <|> letterChar
     rest <- many $ alphaNumChar <|> char '_'
-    return $ Var (first:rest)
+    let name = first:rest
+    if name `elem` reserved then fail (name ++ " is a reserved word") else return $ Var name    -- TODO make this a good error message. 
 
 arithmetic :: Parser Content
 arithmetic = (try (do 
-    a1 <- ((char '(' *> arithmetic <* char ')') <|> number) <* hspace
+    a1 <- ((char '(' *> arithmetic <* char ')') <|> number <|> variable) <* hspace
     op <- arithOperator <* hspace
     a2 <- arithmetic
     return $ Arith op [a1, a2]))
@@ -59,3 +61,9 @@ arithOperator = oneOf "+-/*%"
 
 assignOperator :: Parser String
 assignOperator = string "=" <|> string "+=" <|> string "-=" <|> string "*=" <|> string "/=" <?> "assignment operator"
+
+reserved :: [String]
+reserved = ["if", "else", "while", "for", "in", "or", "and"]
+
+end :: Parser ()
+end = (void eol) <|> eof
