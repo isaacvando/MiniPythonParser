@@ -8,6 +8,9 @@ main = hspec $ do
         it "empty input" $ do
             parsePython "" `shouldBe` (Right $ Start []) 
 
+        it "space input" $ do
+            parsePython "   \n\n\t\t\n\n" `shouldBe` (Right $ Start [])
+
         it "statements on seperate lines" $ do
                 parsePython "1 + 2\n2 + 9" `shouldBe` (Right $ Start [Arith '+' [Num "1", Num "2"], Arith '+' [Num "2", Num "9"]])
 
@@ -16,6 +19,9 @@ main = hspec $ do
 
         it "statement preceded by whitespace" $ do
             parsePython "\n\n\t\t\t\n(10 * 10)" `shouldBe` (Right $ Start [Arith '*' [Num "10", Num "10"]])
+
+        it "statement followed by whitespace" $ do
+            parsePython "10     \n\n\t\n\n\n" `shouldBe` (Right $ Start [Num "10"])
         
         describe "arithmetic" $ do
             it "simple operation" $ do
@@ -47,6 +53,15 @@ main = hspec $ do
 
             it "operation with only variables" $ do
                 parsePython "x * y + z" `shouldBe` (Right $ Start [Arith '*' [Var "x", Arith '+' [Var "y", Var "z"]]])
+
+            it "no space between operands" $ do
+                parsePython "x+2" `shouldBe` (Right $ Start [Arith '+' [Var "x", Num "2"]])
+
+            it "extra space between operands" $ do
+                parsePython "2    +    lambda" `shouldBe` (Right $ Start [Arith '+' [Num "2", Var "lambda"]])
+
+            it "extra space between parens" $ do
+                parsePython "(   xyz  *  abc  + jkl  )" `shouldBe` (Right $ Start [Arith '*' [Var "xyz", Arith '+' [Var "abc", Var "jkl"]]])
 
         describe "assignment" $ do
             it "variable declaration" $ do

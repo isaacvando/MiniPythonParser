@@ -17,12 +17,8 @@ parsePython input = case parse pythonFile "" input of
 
 pythonFile :: Parser Content
 pythonFile = do
-    -- s <- many $ fmap Just statement <|> fmap (\_ -> Nothing) (hspace <* sep)
-    -- eof
-    -- return $ Start (foldr (\x acc -> case x of Just x -> x:acc; Nothing -> acc) [] s)
-    s <- many $ many (hspace *> eol) *> statement
-    many (hspace *> eol)
-    eof
+    s <- many $ try $ many (hspace *> eol) *> statement
+    space *> eof
     return $ Start s
 
 statement :: Parser Content
@@ -44,13 +40,14 @@ variable = do
 
 arithmetic :: Parser Content
 arithmetic = (try (do 
-    a1 <- ((char '(' *> arithmetic <* char ')') <|> number <|> variable) <* hspace
+    a1 <- (arithWithParens <|> number <|> variable) <* hspace
     op <- arithOperator <* hspace
     a2 <- arithmetic
     return $ Arith op [a1, a2]))
-    <|> (char '(' *> arithmetic <* char ')')
+    <|> arithWithParens
     <|> number
     <|> variable
+        where arithWithParens = (char '(' *> hspace *> arithmetic <* hspace <* char ')')
 
 number :: Parser Content
 number = do
