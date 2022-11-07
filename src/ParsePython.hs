@@ -2,9 +2,8 @@ module ParsePython where
 
 import Text.Megaparsec
 import Text.Megaparsec.Char
-import Data.Void
+import Data.Void (Void)
 import Control.Monad (void)
-import Control.Monad.Fail -- temporary
 
 type Parser = Parsec Void String
 
@@ -18,28 +17,30 @@ parsePython input = case parse pythonFile "" input of
 
 pythonFile :: Parser Content
 pythonFile = do
-    s <- many $ statement <* space
-    end
+    -- s <- many $ fmap Just statement <|> fmap (\_ -> Nothing) (hspace <* sep)
+    -- eof
+    -- return $ Start (foldr (\x acc -> case x of Just x -> x:acc; Nothing -> acc) [] s)
+    s <- many $ many (hspace *> eol) *> statement
+    many (hspace *> eol)
+    eof
     return $ Start s
 
 statement :: Parser Content
-statement = do
-    s <- try (arithmetic <* end) <|> (assignment <* end)
-    return s 
+statement = try (arithmetic <* sep) <|> (assignment <* sep) <?> "statement"
 
 assignment :: Parser Content
 assignment = do
     v <- variable <* hspace
     op <- assignOperator <* hspace
-    exp <- try arithmetic <|> variable
-    return $ Assign op [v, exp]
+    ex <- try arithmetic <|> variable
+    return $ Assign op [v, ex]
 
 variable :: Parser Content
 variable = do
     first <- char '_' <|> letterChar
     rest <- many $ alphaNumChar <|> char '_'
     let name = first:rest
-    if name `elem` reserved then fail (name ++ " is a reserved word") else return $ Var name    -- TODO make this a good error message. 
+    if name `elem` reserved then fail (name ++ " is a reserved word") else return $ Var name
 
 arithmetic :: Parser Content
 arithmetic = (try (do 
@@ -67,5 +68,5 @@ assignOperator = string "=" <|> string "+=" <|> string "-=" <|> string "*=" <|> 
 reserved :: [String]
 reserved = ["if", "else", "while", "for", "in", "or", "and"]
 
-end :: Parser ()
-end = (void eol) <|> eof
+sep :: Parser ()
+sep = hspace *> (void eol <|> eof)

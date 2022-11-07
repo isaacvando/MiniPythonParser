@@ -7,6 +7,15 @@ main = hspec $ do
     describe "Python parser tests" $ do
         it "empty input" $ do
             parsePython "" `shouldBe` (Right $ Start []) 
+
+        it "statements on seperate lines" $ do
+                parsePython "1 + 2\n2 + 9" `shouldBe` (Right $ Start [Arith '+' [Num "1", Num "2"], Arith '+' [Num "2", Num "9"]])
+
+        it "statements separated by whitespace" $ do
+            parsePython "f    \n\n\n\t  \t\t\ng = 10" `shouldBe` (Right $ Start [Var "f", Assign "=" [Var "g", Num "10"]])
+
+        it "statement preceded by whitespace" $ do
+            parsePython "\n\n\t\t\t\n(10 * 10)" `shouldBe` (Right $ Start [Arith '*' [Num "10", Num "10"]])
         
         describe "arithmetic" $ do
             it "simple operation" $ do
@@ -30,9 +39,6 @@ main = hspec $ do
             it "sets of parens" $ do
                 parsePython "((98.7 * -90) + (0.00009 - -89))" `shouldBe` (Right $ Start [Arith '+' [Arith '*' [Num "98.7", Num "-90"], Arith '-' [Num "0.00009", Num "-89"]]])
 
-            it "statements on seperate lines" $ do
-                parsePython "1 + 2\n2 + 9" `shouldBe` (Right $ Start [Arith '+' [Num "1", Num "2"], Arith '+' [Num "2", Num "9"]])
-
             it "operation containing a variable" $ do
                 parsePython "x * 2" `shouldBe` (Right $ Start [Arith '*' [Var "x", Num "2"]])
 
@@ -41,9 +47,6 @@ main = hspec $ do
 
             it "operation with only variables" $ do
                 parsePython "x * y + z" `shouldBe` (Right $ Start [Arith '*' [Var "x", Arith '+' [Var "y", Var "z"]]])
-
-            it "malformed parens fails" $ do
-                parsePython "(x + y) + y)" `shouldSatisfy` isLeft
 
         describe "assignment" $ do
             it "variable declaration" $ do
@@ -55,11 +58,8 @@ main = hspec $ do
             it "_ is a valid variable name" $ do
                 parsePython "_" `shouldBe` (Right $ Start [Var "_"])
 
-            -- it "beginning with a number is invalid" $ do
-            --     parsePython "89badvar" `shouldSatisfy` isLeft
-
-            -- it "variable names may not be reserved words" $ do
-            --     parsePython "if" `shouldSatisfy` isLeft
+            it "variable names may not be reserved words" $ do
+                parsePython "if" `shouldSatisfy` isLeft
 
             it "basic assignment" $ do
                 parsePython "foo = 10.7" `shouldBe` (Right $ Start [Assign "=" [Var "foo", Num "10.7"]])
@@ -72,9 +72,17 @@ main = hspec $ do
 
             it "variable set to variable" $ do
                 parsePython "y = z" `shouldBe` (Right $ Start [Assign "=" [Var "y", Var "z"]])
-            
 
-        -- describe "errors" $ do
-        --     it "needlessly indented statement" $ do
-        --         parsePython " 1 + 2" `shouldSatisfy` isLeft
+            it "variable set to complex expression containing variables" $ do
+                parsePython "lambda *= x * 6 % z" `shouldBe` (Right $ Start [Assign "*=" [Var "lambda", Arith '*' [Var "x", Arith '%' [Num "6", Var "z"]]]])
+    
+        describe "errors" $ do
+            it "needlessly indented statement" $ do
+                parsePython " 1 + 2" `shouldSatisfy` isLeft
+
+            it "malformed parens fails" $ do
+                parsePython "(x + y) + y)" `shouldSatisfy` isLeft
+
+            it "variable beginning with a number is invalid" $ do
+                parsePython "89badvar" `shouldSatisfy` isLeft
 
