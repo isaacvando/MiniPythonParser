@@ -92,8 +92,18 @@ main = hspec $ do
                 parsePython "lambda *= x * 6 % z" `shouldBe` (Right $ Start [Assign "*=" (Var "lambda") (Arith '*' (Var "x") (Arith '%' (Num "6") (Var "z")))])
     
         describe "conditional" $ do
-            it "arithmetic expressions" $ do 
+            it "comparison with variables" $ do
+                parsePython "x > y" `shouldBe` (Right $ Start [Cond ">" (Var "x") (Var "y")])
+
+            it "comparison with and operator" $ do
+                parsePython "foobar and 9" `shouldBe` (Right $ Start [Cond "and" (Var "foobar") (Num "9")])
+
+            it "expression with right parens" $ do
+                parsePython "-89 != (x * 78)" `shouldBe` (Right $ Start [Cond "!=" (Num "-89") (Arith '*' (Var "x") (Num "78"))])
+
+            it "arithmetic expression with parens" $ do 
                 parsePython "(10 - 8) <= x * 7" `shouldBe` (Right $ Start [Cond "<=" (Arith '-' (Num "10") (Num "8")) (Arith '*' (Var "x") (Num "7"))])
+
         describe "errors" $ do
             it "needlessly indented statement" $ do
                 parsePython " 1 + 2" `shouldSatisfy` isLeft

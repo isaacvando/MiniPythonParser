@@ -27,7 +27,14 @@ pythonFile = do
     return $ Start s
 
 statement :: Parser Content
-statement = try (arithmetic <* sep) <|> (assignment <* sep) <?> "statement"
+statement = try (arithmetic <* sep) <|> try (assignment <* sep) <|> (conditional <* sep) <?> "statement"
+
+conditional :: Parser Content
+conditional = do
+    p1 <- arithmetic <* hspace
+    op <- condOperator <* hspace
+    p2 <- arithmetic
+    return $ Cond op p1 p2
 
 assignment :: Parser Content
 assignment = do
@@ -66,6 +73,11 @@ arithOperator = oneOf "+-/*%"
 
 assignOperator :: Parser String
 assignOperator = string "=" <|> string "+=" <|> string "-=" <|> string "*=" <|> string "/=" <?> "assignment operator"
+
+-- clean this up
+condOperator :: Parser String
+condOperator = try (string "<") <|> try (string ">") <|> string "<=" <|> string ">=" 
+                <|> string "==" <|> string "!=" <|> string "and" <|> string "or" <|> string "not"
 
 reserved :: [String]
 reserved = ["if", "else", "while", "for", "in", "or", "and"]
