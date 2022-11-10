@@ -7,7 +7,12 @@ import Control.Monad (void)
 
 type Parser = Parsec Void String
 
-data Content = Start [Content] | Arith Char [Content] | Num String | Assign String [Content] | Var String
+data Content = Start [Content] 
+    | Arith Char Content Content
+    | Num String 
+    | Assign String Content Content 
+    | Var String
+    | Cond String Content Content
     deriving (Show, Eq)
 
 parsePython :: String -> Either String Content
@@ -29,7 +34,7 @@ assignment = do
     v <- variable <* hspace
     op <- assignOperator <* hspace
     ex <- try arithmetic <|> variable
-    return $ Assign op [v, ex]
+    return $ Assign op v ex
 
 variable :: Parser Content
 variable = do
@@ -43,7 +48,7 @@ arithmetic = (try (do
     a1 <- (arithWithParens <|> number <|> variable) <* hspace
     op <- arithOperator <* hspace
     a2 <- arithmetic
-    return $ Arith op [a1, a2]))
+    return $ Arith op a1 a2))
     <|> arithWithParens
     <|> number
     <|> variable
