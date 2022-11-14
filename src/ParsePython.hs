@@ -2,17 +2,20 @@ module ParsePython where
 
 import Text.Megaparsec
 import Text.Megaparsec.Char
+import Text.Megaparsec.Debug
 import Data.Void (Void)
 import Control.Monad (void)
 
 type Parser = Parsec Void String
 
-data Content = Start [Content] 
+data Content = Start [Content]
     | Arith Char Content Content
-    | Num String 
-    | Assign String Content Content 
+    | Num String
+    | Assign String Content Content
     | Var String
     | Cond String Content Content
+    | Bool String
+    | If Content [Content]
     deriving (Show, Eq)
 
 parsePython :: String -> Either String Content
@@ -27,14 +30,27 @@ pythonFile = do
     return $ Start s
 
 statement :: Parser Content
-statement = try (arithmetic <* sep) <|> try (assignment <* sep) <|> (conditional <* sep) <?> "statement"
+statement = try (arithmetic <* sep) 
+            <|> try (assignment <* sep) 
+            <|> try (conditional <* sep) 
+            <|> (ifExp <* sep)
+            <?> "statement"
 
 conditional :: Parser Content
-conditional = do
-    p1 <- arithmetic <* hspace
+conditional = try (char '(' *> hspace *> conditional <* hspace <* char ')')
+    <|> try (do
+    p1 <- (bool <|> arithmetic) <* hspace
     op <- condOperator <* hspace
-    p2 <- arithmetic
-    return $ Cond op p1 p2
+    p2 <- bool <|> arithmetic
+    return $ Cond op p1 p2)
+    <|> bool
+
+ifExp :: Parser Content
+ifExp = do
+    string "if" *> hspace
+    cond <- conditional <* hspace <* char ':' <* newline
+    stmts <- some $ string "    " *> statement
+    return $ If cond stmts
 
 assignment :: Parser Content
 assignment = do
@@ -51,15 +67,15 @@ variable = do
     if name `elem` reserved then fail (name ++ " is a reserved word") else return $ Var name
 
 arithmetic :: Parser Content
-arithmetic = (try (do 
+arithmetic = try (do
     a1 <- (arithWithParens <|> number <|> variable) <* hspace
     op <- arithOperator <* hspace
     a2 <- arithmetic
-    return $ Arith op a1 a2))
+    return $ Arith op a1 a2)
     <|> arithWithParens
     <|> number
     <|> variable
-        where arithWithParens = (char '(' *> hspace *> arithmetic <* hspace <* char ')')
+        where arithWithParens = char '(' *> hspace *> arithmetic <* hspace <* char ')'
 
 number :: Parser Content
 number = do
@@ -67,6 +83,9 @@ number = do
     start <- some digitChar
     end <- char '.' *> some digitChar <|> string ""
     return $ Num $ sign++start++(if null end then "" else '.':end)
+
+bool :: Parser Content
+bool = fmap Bool $ string "True" <|> string "False"
 
 arithOperator :: Parser Char
 arithOperator = oneOf "+-/*%"
@@ -76,11 +95,11 @@ assignOperator = string "=" <|> string "+=" <|> string "-=" <|> string "*=" <|> 
 
 -- clean this up
 condOperator :: Parser String
-condOperator = try (string "<") <|> try (string ">") <|> string "<=" <|> string ">=" 
+condOperator = try (string "<=") <|> try (string ">=") <|> string "<" <|> string ">"
                 <|> string "==" <|> string "!=" <|> string "and" <|> string "or" <|> string "not"
 
 reserved :: [String]
-reserved = ["if", "else", "while", "for", "in", "or", "and"]
+reserved = ["if", "else", "while", "for", "in", "or", "and", "True", "False"]
 
 sep :: Parser ()
 sep = hspace *> (void eol <|> eof)
