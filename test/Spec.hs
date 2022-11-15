@@ -114,13 +114,35 @@ main = hspec $ describe "Python parser tests" $ do
 
     describe "if statements" $ do
         it "simple if" $ do
-            parsePython "if x > 10:\n    newVar" `shouldBe` Right (Start [If (Cond ">" (Var "x") (Num "10")) [Var "newVar"]])
+            parsePython "if x > 10:\n    newVar" `shouldBe` Right (Start [IfStatement [If (Cond ">" (Var "x") (Num "10")) [Var "newVar"]]])
+
+        it "if with variable condition" $ do
+            parsePython "if x:\n    x" `shouldBe` Right (Start [IfStatement [If (Var "x") [Var "x"]]])
+
+        it "if with arithmetic condition" $ do
+            parsePython "if 10 * 10:\n    f" `shouldBe` Right (Start [IfStatement [If (Arith '*' (Num "10") (Num "10")) [Var "f"]]])
 
         it "if with multi line body" $ do
-            parsePython "if False:\n    x\n    10" `shouldBe` Right (Start [If (Bool "False") [Var "x", Num "10"]])
+            parsePython "if False:\n    x\n    10" `shouldBe` Right (Start [IfStatement [If (Bool "False") [Var "x", Num "10"]]])
 
         it "if with condition with parens" $ do
-            parsePython "if (x != y):\n    x" `shouldBe` Right (Start [If (Cond "!=" (Var "x") (Var "y")) [Var "x"]])
+            parsePython "if (x != y):\n    x" `shouldBe` Right (Start [IfStatement [If (Cond "!=" (Var "x") (Var "y")) [Var "x"]]])
+
+        it "if with else" $ do
+            parsePython "if False:\n    foo\nelse:\n    bar" `shouldBe` Right (Start [IfStatement [If (Bool "False") [Var "foo"], Else [Var "bar"]]])
+
+        it "if with elif" $ do
+            parsePython "if True:\n    foo\nelif False:\n    bar" `shouldBe` Right (Start [IfStatement [If (Bool "True") [Var "foo"], Elif (Bool "False") [Var "bar"]]])
+        
+        it "two elifs and else" $ do
+            parsePython "if True:\n    foo\nelif True:\n    foo\nelif False:\n    foo\nelse:\n    x + 2" `shouldBe`
+                Right (Start [IfStatement [If (Bool "True") [Var "foo"], Elif (Bool "True") [Var "foo"], Elif (Bool "False") [Var "foo"], Else [Arith '+' (Var "x") (Num "2")]]])
+
+        it "extra spaces" $ do
+            parsePython "if    x     :   \n    foo \n    x" `shouldBe` Right (Start [IfStatement [If (Var "x") [Var "foo", Var "x"]]])
+
+        it "nested if" $ do
+            parsePython "if True:\n    if False:\n        g" `shouldBe` Right (Start [IfStatement [If (Bool "True") [If (Bool "False") [Var "g"]]]])
 
     describe "errors" $ do
         it "needlessly indented statement" $ do
@@ -131,4 +153,10 @@ main = hspec $ describe "Python parser tests" $ do
 
         it "variable beginning with a number is invalid" $ do
             parsePython "89badvar" `shouldSatisfy` isLeft
+
+        it "only elif" $ do
+            parsePython "elif False:\n    foo" `shouldSatisfy` isLeft
+
+        it "only else" $ do
+            parsePython "else:\n    frobble" `shouldSatisfy` isLeft
 
