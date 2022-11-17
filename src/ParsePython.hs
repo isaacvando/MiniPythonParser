@@ -28,16 +28,17 @@ parsePython input = case parse pythonFile "" input of
 
 pythonFile :: Parser Content
 pythonFile = do
-    s <- many $ try $ many (hspace *> eol) *> statement
+    s <- many $ try $ many (hspace *> eol) *> statement 0
     space *> eof
     return $ Start s
 
-statement :: Parser Content
-statement = try (arithmetic <* sep) 
-            <|> try (assignment <* sep) 
-            <|> try (conditional <* sep) 
-            <|> dbg "if" ifStatement <* sep
-            <?> "statement"
+statement :: Int -> Parser Content
+statement indent = (string (replicate (indent * 4) ' ') *> 
+   ( try (arithmetic <* sep)
+    <|> try (assignment <* sep)
+    <|> try (conditional <* sep)
+    <|> ifStatement indent
+    <?> "statement"))
 
 conditional :: Parser Content
 conditional = try (char '(' *> hspace *> conditional <* hspace <* char ')')
@@ -48,24 +49,26 @@ conditional = try (char '(' *> hspace *> conditional <* hspace <* char ')')
     return $ Cond op p1 p2)
     <|> bool 
 
-ifStatement :: Parser Content
-ifStatement = do
-    ifExp <- (do 
+ifStatement :: Int -> Parser Content
+ifStatement indent = do
+    ifExp <- try (do 
         void $ string "if" *> hspace
         cond <- getCond
-        stmts <- some $ string "    " *> statement
+        stmts <- getBlock
         return $ If cond stmts)
     elifExps <- many (do
         void $ string "elif" *> hspace
         cond <- getCond
-        stmts <- some $ string "    " *> statement
+        stmts <- getBlock
         return $ Elif cond stmts)
     elseExp <- optional (do
         void $ string "else:" <* hspace <* eol
-        stmts <- some $ string "    " *> statement
+        stmts <- getBlock
         return $ Else stmts)
     return $ IfStatement $ ifExp:elifExps ++ case elseExp of Nothing -> []; Just x -> [x]
-        where getCond = (try conditional <|> arithmetic) <* hspace <* char ':' <* hspace <* eol
+        where 
+            getCond = (try conditional <|> arithmetic) <* hspace <* char ':' <* hspace <* eol
+            getBlock = some $ try $ statement (indent + 1)
 
 assignment :: Parser Content
 assignment = do

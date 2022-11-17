@@ -142,7 +142,10 @@ main = hspec $ describe "Python parser tests" $ do
             parsePython "if    x     :   \n    foo \n    x" `shouldBe` Right (Start [IfStatement [If (Var "x") [Var "foo", Var "x"]]])
 
         it "nested if" $ do
-            parsePython "if True:\n    if False:\n        g" `shouldBe` Right (Start [IfStatement [If (Bool "True") [If (Bool "False") [Var "g"]]]])
+            parsePython "if True:\n    if False:\n        g" `shouldBe` Right (Start [IfStatement [If (Bool "True") [IfStatement [If (Bool "False") [Var "g"]]]]])
+
+        it "nested if with other statement" $ do
+            parsePython "if x:\n    foo\n    if True:\n        bar" `shouldBe` Right (Start [IfStatement [If (Var "x") [Var "foo", IfStatement [If (Bool "True") [Var "bar"]]]]])
 
     describe "errors" $ do
         it "needlessly indented statement" $ do
