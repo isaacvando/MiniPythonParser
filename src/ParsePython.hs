@@ -56,13 +56,13 @@ ifStatement indent = do
         cond <- getCond
         stmts <- getBlock
         return $ If cond stmts)
-    elifExps <- many (do
-        void $ string "elif" *> hspace
+    elifExps <- many (try $ do
+        void $ string (replicate (indent * 4) ' ') *> string "elif" *> hspace -- TODO: this is a bad temp solution
         cond <- getCond
         stmts <- getBlock
         return $ Elif cond stmts)
     elseExp <- optional (do
-        void $ string "else:" <* hspace <* eol
+        void $ string (replicate (indent * 4) ' ') *> string "else:" <* hspace <* eol -- TODO: this is a bad temp solution
         stmts <- getBlock
         return $ Else stmts)
     return $ IfStatement $ ifExp:elifExps ++ case elseExp of Nothing -> []; Just x -> [x]
