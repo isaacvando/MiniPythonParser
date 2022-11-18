@@ -5,6 +5,7 @@ import Text.Megaparsec.Char
 import Text.Megaparsec.Debug
 import Data.Void (Void)
 import Control.Monad (void)
+import Data.Char
 
 type Parser = Parsec Void String
 
@@ -26,8 +27,16 @@ parsePython input = case parse pythonFile "" input of
     Left bundle ->  Left $ errorBundlePretty bundle
     Right result -> Right result
 
+
+-- exp :: Parser Content
+-- exp = do
+--     inp = getInput
+
 pythonFile :: Parser Content
-pythonFile = Start <$> (many $ try $ many (hspace *> eol) *> statement 0) <* space <* eof
+pythonFile = do
+    inp <- getInput
+    setInput (map toUpper inp)
+    Start <$> (many $ try $ many (hspace *> eol) *> statement 0) <* space <* eof
 
 statement :: Int -> Parser Content
 statement i = (string (replicate (i * 4) ' ') *> 
@@ -65,7 +74,7 @@ ifStatement i = do
     return $ IfStatement $ ifExp:elifExps ++ case elseExp of Nothing -> []; Just x -> [x]
         where 
             getCond = (try conditional <|> arithmetic) <* hspace <* char ':' <* hspace <* eol
-            getBlock = some $ try $ (many $ try (hspace *> eol)) *> statement (i + 1) -- TODO: make this less gross
+            getBlock = (some $ try $ (many $ try (hspace *> eol)) *> statement (i + 1)) -- TODO: make this less gross
             indent = replicate (i * 4) ' '
 
 assignment :: Parser Content

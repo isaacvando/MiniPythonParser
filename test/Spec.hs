@@ -153,6 +153,10 @@ main = hspec $ describe "Python parser tests" $ do
         it "if containing whitespace" $ do
             parsePython "if x:\n\n    foo" `shouldBe` Right (Start [IfStatement [If (Var "x") [Var "foo"]]])
 
+        it "if contained spaced ifs" $ do
+            parsePython "if x:\n    if y:\n        foo\n    if z:\n        bar" `shouldBe` 
+                Right (Start [IfStatement [If (Var "x") [IfStatement [If (Var "y") [Var "foo"]], IfStatement [If (Var "z") [Var "bar"]]]]])
+
     describe "errors" $ do
         it "needlessly indented statement" $ do
             parsePython " 1 + 2" `shouldSatisfy` isLeft
