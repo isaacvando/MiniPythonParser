@@ -2,10 +2,10 @@ module ParsePython where
 
 import Text.Megaparsec
 import Text.Megaparsec.Char
-import Text.Megaparsec.Debug
+import Text.Megaparsec.Debug (dbg)
 import Data.Void (Void)
 import Control.Monad (void)
-import Data.Char
+import Data.Char (isSpace)
 
 type Parser = Parsec Void String
 
@@ -27,24 +27,19 @@ parsePython input = case parse pythonFile "" input of
     Left bundle ->  Left $ errorBundlePretty bundle
     Right result -> Right result
 
-
--- exp :: Parser Content
--- exp = do
---     inp = getInput
-
 pythonFile :: Parser Content
 pythonFile = do
     inp <- getInput
-    setInput (map toUpper inp)
-    Start <$> (many $ try $ many (hspace *> eol) *> statement 0) <* space <* eof
+    setInput $ (unlines . filter (not . all isSpace) . lines) inp -- filter out meaningless vertical space
+    Start <$> (many (statement 0) <* space <* eof)
 
 statement :: Int -> Parser Content
-statement i = (string (replicate (i * 4) ' ') *> 
-   ( try (arithmetic <* sep)
+statement i = dbg "stm" $ string (replicate (i * 4) ' ') *> 
+    (try (arithmetic <* sep)
     <|> try (assignment <* sep)
     <|> try (conditional <* sep)
     <|> ifStatement i
-    <?> "statement"))
+    <?> "statement")
 
 conditional :: Parser Content
 conditional = try (char '(' *> hspace *> conditional <* hspace <* char ')')
@@ -56,7 +51,7 @@ conditional = try (char '(' *> hspace *> conditional <* hspace <* char ')')
     <|> bool 
 
 ifStatement :: Int -> Parser Content
-ifStatement i = do
+ifStatement i = dbg "if" $ do
     ifExp <- try (do 
         void $ string "if" *> hspace
         cond <- getCond
@@ -67,14 +62,14 @@ ifStatement i = do
         cond <- getCond
         stmts <- getBlock
         return $ Elif cond stmts)
-    elseExp <- optional (do
+    elseExp <- optional (try $ do
         void $ string indent *> string "else:" <* hspace <* eol -- TODO: this is a bad temp solution
         stmts <- getBlock
         return $ Else stmts)
     return $ IfStatement $ ifExp:elifExps ++ case elseExp of Nothing -> []; Just x -> [x]
         where 
             getCond = (try conditional <|> arithmetic) <* hspace <* char ':' <* hspace <* eol
-            getBlock = (some $ try $ (many $ try (hspace *> eol)) *> statement (i + 1)) -- TODO: make this less gross
+            getBlock = some $ statement (i + 1)
             indent = replicate (i * 4) ' '
 
 assignment :: Parser Content
