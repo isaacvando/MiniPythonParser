@@ -1,5 +1,6 @@
 module ParsePython where
 
+-- TODO: refactor to use Text.Megaparsec.Char.Lexer
 import Text.Megaparsec
 import Text.Megaparsec.Char
 import Text.Megaparsec.Debug (dbg)
@@ -34,7 +35,7 @@ pythonFile = do
     Start <$> (many (statement 0) <* space <* eof)
 
 statement :: Int -> Parser Content
-statement i = dbg "stm" $ string (replicate (i * 4) ' ') *> 
+statement i = string (replicate (i * 4) ' ') *> 
     (try (arithmetic <* sep)
     <|> try (assignment <* sep)
     <|> try (conditional <* sep)
@@ -51,7 +52,7 @@ conditional = try (char '(' *> hspace *> conditional <* hspace <* char ')')
     <|> bool 
 
 ifStatement :: Int -> Parser Content
-ifStatement i = dbg "if" $ do
+ifStatement i = do
     ifExp <- try (do 
         void $ string "if" *> hspace
         cond <- getCond
