@@ -23,6 +23,8 @@ data Content = Start [Content]
     | Else [Content]
     | For Content Content [Content]
     | While Content [Content]
+    | Call String [Content]
+    | Function String [String] [Content]
     deriving (Show, Eq)
 
 parsePython :: String -> Either String Content
@@ -41,10 +43,24 @@ statement i = string (replicate (i * 4) ' ') *>
     (try (arithmetic <* sep)
     <|> try (assignment <* sep)
     <|> try (conditional <* sep)
+    <|> try (call <* sep)
     <|> try (ifStatement i)
     <|> try (forLoop i)
     <|> whileLoop i
     <?> "statement")
+
+call :: Parser Content
+call = try (do
+        name <- identifier <* string "()"
+        return $ Call name [])
+    <|> (do
+        name <- identifier
+        arg1 <- char '(' *> argument
+        args <- many (hspace *> char ',' *> hspace *> argument) <* char ')'
+        return $ Call name (arg1:args))
+
+argument :: Parser Content
+argument = try call <|> try arithmetic <|> conditional <?> "function argument"
 
 conditional :: Parser Content
 conditional = try (char '(' *> hspace *> conditional <* hspace <* char ')')
@@ -99,21 +115,25 @@ assignment = do
 
 arithmetic :: Parser Content
 arithmetic = try (do
-    a1 <- (arithWithParens <|> number <|> variable) <* hspace
+    a1 <- (arithWithParens <|> number <|> try call <|> variable) <* hspace
     op <- arithOperator <* hspace
     a2 <- arithmetic
     return $ Arith op a1 a2)
     <|> arithWithParens
     <|> number
+    <|> try call
     <|> variable
         where arithWithParens = char '(' *> hspace *> arithmetic <* hspace <* char ')'
 
 variable :: Parser Content
-variable = do
+variable = Var <$> identifier
+
+identifier :: Parser String
+identifier = do
     first <- char '_' <|> letterChar
     rest <- many $ alphaNumChar <|> char '_'
     let name = first:rest
-    if name `elem` reserved then fail (name ++ " is a reserved word") else return $ Var name
+    if name `elem` reserved then fail (name ++ " is a reserved word") else return name
 
 number :: Parser Content
 number = do

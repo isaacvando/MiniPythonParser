@@ -65,6 +65,9 @@ main = hspec $ describe "Python parser tests" $ do
         it "operation with only variables" $ do
             parsePython "x * y + z" `shouldBe` Right (Start [Arith '*' (Var "x") (Arith '+'  (Var "y") ( Var "z"))])
 
+        it "operation with function call" $ do
+            parsePython "x * baz(10)" `shouldBe` Right (Start [Arith '*' (Var "x") (Call "baz" [Num "10"])])
+
         it "no space between operands" $ do
             parsePython "x+2" `shouldBe` Right (Start [Arith '+' (Var "x") (Num "2")])
 
@@ -102,6 +105,9 @@ main = hspec $ describe "Python parser tests" $ do
         it "variable set to complex expression containing variables" $ do
             parsePython "lambda *= x * 6 % z" `shouldBe` Right (Start [Assign "*=" (Var "lambda") (Arith '*' (Var "x") (Arith '%' (Num "6") (Var "z")))])
 
+        it "variable set to function call" $ do
+            parsePython "foo = isPequalNP()" `shouldBe` Right (Start [Assign "=" (Var "foo") (Call "isPequalNP" [])])
+
     describe "conditional" $ do
         it "boolean literal" $ do
             parsePython "True" `shouldBe` Right (Start [Bool "True"])
@@ -111,6 +117,9 @@ main = hspec $ describe "Python parser tests" $ do
 
         it "variable and boolean" $ do
             parsePython "x or False" `shouldBe` Right (Start [Cond "or" (Var "x") (Bool "False")])
+
+        it "variable and function call" $ do
+            parsePython "foo() != bar" `shouldBe` Right (Start [Cond "!=" (Call "foo" []) (Var "bar")])
 
         it "comparison with variables" $ do
             parsePython "x > y" `shouldBe` Right (Start [Cond ">" (Var "x") (Var "y")])
@@ -133,6 +142,9 @@ main = hspec $ describe "Python parser tests" $ do
 
         it "if with arithmetic condition" $ do
             parsePython "if 10 * 10:\n    f" `shouldBe` Right (Start [IfStatement [If (Arith '*' (Num "10") (Num "10")) [Var "f"]]])
+
+        it "if with function call condition" $ do
+            parsePython "if foo():\n    bar" `shouldBe` Right (Start [IfStatement [If (Call "foo" []) [Var "bar"]]])
 
         it "if with multi line body" $ do
             parsePython "if False:\n    x\n    10" `shouldBe` Right (Start [IfStatement [If (Bool "False") [Var "x", Num "10"]]])
@@ -189,6 +201,28 @@ main = hspec $ describe "Python parser tests" $ do
 
         it "arithmetic condition" $ do
             parsePython "while 10:\n    foo" `shouldBe` Right (Start [While (Num "10") [Var "foo"]]) 
+
+        it "functiona call condition" $ do
+            parsePython "while myFunc(baz):\n    10" `shouldBe` Right (Start [While (Call "myFunc" [Var "baz"]) [Num "10"]])
+
+    describe "function calls" $ do
+        it "basic call" $ do
+            parsePython "foo()" `shouldBe` Right (Start [Call "foo" []])
+
+        it "call with __" $ do
+            parsePython "__main__()" `shouldBe` Right (Start [Call "__main__" []])
+
+        it "call with simple args" $ do
+            parsePython "myFunc(x, y, z)" `shouldBe` Right (Start [Call "myFunc" [Var "x", Var "y", Var "z"]])
+
+        it "call with function call as an arg" $ do
+            parsePython "foo(bar())" `shouldBe` Right (Start [Call "foo" [Call "bar" []]])
+
+        it "call with arithmetic expression" $ do
+            parsePython "func(x * 7 - 0)" `shouldBe` Right (Start [Call "func" [Arith '*' (Var "x") (Arith '-' (Num "7") (Num "0"))]])
+
+        it "call with mixed args" $ do
+            parsePython "foo(frobble(), x, 10 % 10)" `shouldBe` Right (Start [Call "foo" [Call "frobble" [], Var "x", Arith '%' (Num "10") (Num "10")]])
 
     describe "errors" $ do
         it "needlessly indented statement" $ do
