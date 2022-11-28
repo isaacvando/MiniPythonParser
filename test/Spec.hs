@@ -180,6 +180,15 @@ main = hspec $ describe "Python parser tests" $ do
             parsePython "for xs in xss:\n    for x in xs:\n        foo\n    bar" `shouldBe`
                 Right (Start [For (Var "xs") (Var "xss") [For (Var "x") (Var "xs") [Var "foo"], Var "bar"]])
 
+        it "simple while" $ do
+            parsePython "while True:\n    frobe" `shouldBe` Right (Start [While (Bool "True") [Var "frobe"]])
+
+        it "nested while and for loops" $ do
+            parsePython "while (10 * 89) < x:\n    for g in G:\n        x\n        y" `shouldBe` 
+                Right (Start [While (Cond "<" (Arith '*' (Num "10") (Num "89")) (Var "x")) [For (Var "g") (Var "G") [Var "x", Var "y"]]])
+
+        it "arithmetic condition" $ do
+            parsePython "while 10:\n    foo" `shouldBe` Right (Start [While (Num "10") [Var "foo"]]) 
 
     describe "errors" $ do
         it "needlessly indented statement" $ do

@@ -22,6 +22,7 @@ data Content = Start [Content]
     | Elif Content [Content]
     | Else [Content]
     | For Content Content [Content]
+    | While Content [Content]
     deriving (Show, Eq)
 
 parsePython :: String -> Either String Content
@@ -41,7 +42,8 @@ statement i = string (replicate (i * 4) ' ') *>
     <|> try (assignment <* sep)
     <|> try (conditional <* sep)
     <|> try (ifStatement i)
-    <|> forLoop i
+    <|> try (forLoop i)
+    <|> whileLoop i
     <?> "statement")
 
 conditional :: Parser Content
@@ -81,6 +83,12 @@ forLoop i = do
     collection <- string "in" *> hspace *> variable <* hspace <* char ':' <* hspace <* eol
     body <- some $ statement (i + 1)
     return $ For item collection body
+
+whileLoop :: Int -> Parser Content
+whileLoop i = do
+    cond <- string "while" *> hspace *> (try (arithmetic <* hspace <* char ':') <|> (conditional <* hspace <* char ':')) <* hspace <* eol
+    body <- some $ statement (i + 1)
+    return $ While cond body
 
 assignment :: Parser Content
 assignment = do
