@@ -224,6 +224,12 @@ main = hspec $ describe "Python parser tests" $ do
         it "call with mixed args" $ do
             parsePython "foo(frobble(), x, 10 % 10)" `shouldBe` Right (Start [Call "foo" [Call "frobble" [], Var "x", Arith '%' (Num "10") (Num "10")]])
 
+        it "call with keyword args" $ do
+            parsePython "foo(x=10, y=100)" `shouldBe` Right (Start [Call "foo" [Kwarg "x" (Num "10"), Kwarg "y" (Num "100")]])
+
+        it "mixed keyword args and unnamed args" $ do
+            parsePython "func(name = frobble, 89, num=foo())" `shouldBe` Right (Start [Call "func" [Kwarg "name" (Var "frobble"), Num "89", Kwarg "num" (Call "foo" [])]])
+
     describe "errors" $ do
         it "needlessly indented statement" $ do
             parsePython " 1 + 2" `shouldSatisfy` isLeft

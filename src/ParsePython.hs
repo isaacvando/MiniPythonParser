@@ -24,6 +24,7 @@ data Content = Start [Content]
     | For Content Content [Content]
     | While Content [Content]
     | Call String [Content]
+    | Kwarg String Content
     | Function String [String] [Content]
     deriving (Show, Eq)
 
@@ -60,7 +61,13 @@ call = try (do
         return $ Call name (arg1:args))
 
 argument :: Parser Content
-argument = try call <|> try arithmetic <|> conditional <?> "function argument"
+argument = kwarg <|> try call <|> try arithmetic <|> conditional <?> "function argument"
+    where
+        kwarg :: Parser Content 
+        kwarg = do
+            name <- try (identifier <* hspace <* char '=' <* hspace)
+            arg <- try call <|> try arithmetic <|> conditional <?> "keyword function argument"
+            return $ Kwarg name arg
 
 conditional :: Parser Content
 conditional = try (char '(' *> hspace *> conditional <* hspace <* char ')')
