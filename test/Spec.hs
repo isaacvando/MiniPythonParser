@@ -22,6 +22,18 @@ main = hspec $ describe "Python parser tests" $ do
     it "statement followed by whitespace" $ do
         parsePython "10     \n\n\t\n\n\n" `shouldBe` Right (Start [Num "10"])
 
+    it "comment on its own line" $ do
+        parsePython "#comment" `shouldBe` Right (Start [])
+
+    it "multiple comments" $ do
+        parsePython "#first comment\n\n #   second comment" `shouldBe` Right (Start [])
+
+    it "inline comment after arithmetic" $ do
+        parsePython "(10 * 87) - 6 # cool math" `shouldBe` Right (Start [Arith '-' (Arith '*' (Num "10") (Num "87")) (Num "6")])
+
+    it "inline comments after if statement" $ do
+        parsePython "if x:   # sick condition\n    foo # that's a pretty sweet variable declaration" `shouldBe` Right (Start [IfStatement [If (Var "x") [Var "foo"]]])
+
     describe "arithmetic" $ do
         it "simple operation" $ do
             parsePython "18 + 987" `shouldBe` Right (Start [Arith '+' (Num "18") (Num "987")])

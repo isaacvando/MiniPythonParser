@@ -31,7 +31,7 @@ parsePython input = case parse pythonFile "" input of
 pythonFile :: Parser Content
 pythonFile = do
     inp <- getInput
-    setInput $ (unlines . filter (not . all isSpace) . lines) inp -- filter out meaningless vertical space
+    setInput $ (unlines . filter (not . all isSpace) . map (takeWhile (/= '#')) . lines) inp -- filter out vertical space and comments
     Start <$> (many (statement 0) <* space <* eof)
 
 statement :: Int -> Parser Content
