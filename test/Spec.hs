@@ -169,6 +169,18 @@ main = hspec $ describe "Python parser tests" $ do
             parsePython "if x:\n    if y:\n        foo\n    if z:\n        bar" `shouldBe` 
                 Right (Start [IfStatement [If (Var "x") [IfStatement [If (Var "y") [Var "foo"]], IfStatement [If (Var "z") [Var "bar"]]]]])
 
+    describe "loops" $ do
+        it "simple for" $ do
+            parsePython "for x in xs:\n    frobble" `shouldBe` Right (Start [For (Var "x") (Var "xs") [Var "frobble"]])
+
+        it "for with multiple lines" $ do
+            parsePython "for foo in frobble:\n    10 + x\n    frobble2" `shouldBe` Right (Start [For (Var "foo") (Var "frobble") [Arith '+' (Num "10") (Var "x"), Var "frobble2"]])
+
+        it "nested for loops" $ do
+            parsePython "for xs in xss:\n    for x in xs:\n        foo\n    bar" `shouldBe`
+                Right (Start [For (Var "xs") (Var "xss") [For (Var "x") (Var "xs") [Var "foo"], Var "bar"]])
+
+
     describe "errors" $ do
         it "needlessly indented statement" $ do
             parsePython " 1 + 2" `shouldSatisfy` isLeft

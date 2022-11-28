@@ -21,6 +21,7 @@ data Content = Start [Content]
     | If Content [Content]
     | Elif Content [Content]
     | Else [Content]
+    | For Content Content [Content]
     deriving (Show, Eq)
 
 parsePython :: String -> Either String Content
@@ -39,7 +40,8 @@ statement i = string (replicate (i * 4) ' ') *>
     (try (arithmetic <* sep)
     <|> try (assignment <* sep)
     <|> try (conditional <* sep)
-    <|> ifStatement i
+    <|> try (ifStatement i)
+    <|> forLoop i
     <?> "statement")
 
 conditional :: Parser Content
@@ -72,6 +74,13 @@ ifStatement i = do
             getCond = (try conditional <|> arithmetic) <* hspace <* char ':' <* hspace <* eol
             getBlock = some $ statement (i + 1)
             indent = replicate (i * 4) ' '
+
+forLoop :: Int -> Parser Content
+forLoop i = do
+    item <- string "for" *> hspace *> variable <* hspace
+    collection <- string "in" *> hspace *> variable <* hspace <* char ':' <* hspace <* eol
+    body <- some $ statement (i + 1)
+    return $ For item collection body
 
 assignment :: Parser Content
 assignment = do
