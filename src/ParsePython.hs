@@ -124,7 +124,7 @@ ifStatement i = do
 forLoop :: Int -> Parser Content
 forLoop i = do
     item <- string "for" *> hspace *> variable <* hspace
-    collection <- string "in" *> hspace *> variable <* hspace <* char ':' <* hspace <* eol
+    collection <- string "in" *> hspace *> (try call <|> variable) <* hspace <* char ':' <* hspace <* eol
     body <- some $ statement (i + 1)
     return $ For item collection body
 

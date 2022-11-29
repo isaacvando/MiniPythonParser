@@ -192,6 +192,9 @@ main = hspec $ describe "Python parser tests" $ do
             parsePython "for xs in xss:\n    for x in xs:\n        foo\n    bar" `shouldBe`
                 Right (Start [For (Var "xs") (Var "xss") [For (Var "x") (Var "xs") [Var "foo"], Var "bar"]])
 
+        it "for loop where the collection is a function call" $ do
+            parsePython "for x in getList():\n    foo" `shouldBe` Right (Start [For (Var "x") (Call "getList" []) [Var "foo"]])
+
         it "simple while" $ do
             parsePython "while True:\n    frobe" `shouldBe` Right (Start [While (Bool "True") [Var "frobe"]])
 

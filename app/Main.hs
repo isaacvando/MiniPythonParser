@@ -1,9 +1,7 @@
 module Main (main) where
 
 import ParsePython
-import Data.Char
 import System.IO
-import System.Environment
 import System.Directory
 import Data.String.Interpolate (i)
 import Data.List (concat)
@@ -38,8 +36,12 @@ getTree (IfStatement xs) = [i|[.IfStatement #{concat (map getTree xs)}]|]
 getTree (If cond body) = [i|[.If [.Condition #{getTree cond} ] [.Body #{concat (map getTree body)}] ] |]
 getTree (Elif cond body) = [i|[.{Else If} [.Condition #{getTree cond} ] [.Body #{concat (map getTree body)}] ] |]
 getTree (Else body) = [i|[.Else [.Body #{concat (map getTree body)}] ] |]
-getTree _ = "foo"
-
+getTree (For item collection body) = [i|[.For [.Item #{getTree item} ] [.Collection #{getTree collection} ] [.Body #{concat (map getTree body)}] ] |]
+getTree (While cond body) = [i|[.For [.Condition #{getTree cond} ] [.Body #{concat (map getTree body)}] ] |]
+getTree (Call name args) = [i|[.{Function Call} [.Name #{name} ] [.Args #{concat (map getTree args)} ] ] |]
+getTree (Kwarg name arg) = [i|[.{Keyword Arg} [.Name #{name} ] [.Arg #{getTree arg} ] ] |]
+getTree (Function name args body) = [i|[.Function [.Name #{name} ] [.Arguments #{unwords args} ] [.Body #{concat (map getTree body)}] ] |]
+getTree (Return val) = [i|[.Return #{getTree val} ] |]
 
 
 
