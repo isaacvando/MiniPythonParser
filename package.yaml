@@ -23,6 +23,8 @@ dependencies:
 - megaparsec
 - HaTeX
 - hspec
+- string-interpolate
+- directory
 
 ghc-options:
 - -Wall
@@ -59,3 +61,6 @@ tests:
     - -with-rtsopts=-N
     dependencies:
     - MiniPythonParser
+
+default-extensions:
+  - QuasiQuotes

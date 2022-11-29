@@ -11,12 +11,12 @@ import Data.Char (isSpace)
 type Parser = Parsec Void String
 
 data Content = Start [Content]
-    | Arith Char Content Content
-    | Num String
-    | Assign String Content Content
     | Var String
-    | Cond String Content Content
+    | Num String
     | Bool String
+    | Arith Char Content Content
+    | Assign String Content Content
+    | Cond String Content Content
     | IfStatement [Content]
     | If Content [Content]
     | Elif Content [Content]
