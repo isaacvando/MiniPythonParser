@@ -3,9 +3,9 @@ module ParsePython where
 -- TODO: refactor to use Text.Megaparsec.Char.Lexer
 import Text.Megaparsec
 import Text.Megaparsec.Char
-import Text.Megaparsec.Debug (dbg)
+-- import Text.Megaparsec.Debug (dbg)
 import Data.Void (Void)
-import Control.Monad (void)
+import Control.Monad (void, when)
 import Data.Char (isSpace)
 
 type Parser = Parsec Void String
@@ -26,6 +26,7 @@ data Content = Start [Content]
     | Call String [Content]
     | Kwarg String Content
     | Function String [String] [Content]
+    | Return Content
     deriving (Show, Eq)
 
 parsePython :: String -> Either String Content
@@ -40,14 +41,15 @@ pythonFile = do
     Start <$> (many (statement 0) <* space <* eof)
 
 statement :: Int -> Parser Content
-statement i = string (replicate (i * 4) ' ') *> 
+statement i = string (getSpaces i) *> 
     (try (arithmetic <* sep)
     <|> try (assignment <* sep)
     <|> try (conditional <* sep)
     <|> try (call <* sep)
     <|> try (ifStatement i)
     <|> try (forLoop i)
-    <|> whileLoop i
+    <|> try (whileLoop i)
+    <|> function i
     <?> "statement")
 
 call :: Parser Content
@@ -59,6 +61,25 @@ call = try (do
         arg1 <- char '(' *> argument
         args <- many (hspace *> char ',' *> hspace *> argument) <* char ')'
         return $ Call name (arg1:args))
+
+function :: Int -> Parser Content
+function i = try (do
+        name <- string "def" *> hspace *> identifier <* string "()" <* hspace <* char ':' <* hspace <* eol
+        body <- getBody
+        ret <- getReturn
+        when (ret == Nothing && null body) (fail "empty function body")
+        return $ Function name [] (case ret of Nothing -> body; Just x -> body ++ [Return x]))
+    <|> (do
+        name <- string "def" *> hspace *> identifier <* char '(' <* hspace
+        arg1 <- identifier
+        args <- many (hspace *> char ',' *> hspace *> identifier) <* hspace <* char ')' <* hspace <* char ':' <* eol
+        body <- getBody
+        ret <- getReturn
+        when (ret == Nothing && null body) (fail "empty function body")
+        return $ Function name (arg1:args) (case ret of Nothing -> body; Just x -> body ++ [Return x]))
+            where
+                getBody = many $ try (statement (i + 1))
+                getReturn = optional (string (getSpaces (i + 1) ++ "return") *> hspace *> (try call <|> try arithmetic <|> conditional <?> "return value") <* sep)
 
 argument :: Parser Content
 argument = kwarg <|> try call <|> try arithmetic <|> conditional <?> "function argument"
@@ -163,7 +184,10 @@ condOperator = try (string "<=") <|> try (string ">=") <|> string "<" <|> string
                 <|> string "==" <|> string "!=" <|> string "and" <|> string "or" <|> string "not"
 
 reserved :: [String]
-reserved = ["if", "else", "while", "for", "in", "or", "and", "True", "False"]
+reserved = ["if", "else", "while", "for", "in", "or", "and", "True", "False", "return"]
 
 sep :: Parser ()
 sep = hspace *> (void eol <|> eof)
+
+getSpaces :: Int -> String
+getSpaces i = replicate (i * 4) ' '

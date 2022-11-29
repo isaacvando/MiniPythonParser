@@ -230,6 +230,24 @@ main = hspec $ describe "Python parser tests" $ do
         it "mixed keyword args and unnamed args" $ do
             parsePython "func(name = frobble, 89, num=foo())" `shouldBe` Right (Start [Call "func" [Kwarg "name" (Var "frobble"), Num "89", Kwarg "num" (Call "foo" [])]])
 
+    describe "function definitions" $ do
+        it "simple" $ do
+            parsePython "def foo():\n    bar" `shouldBe` Right (Start [Function "foo" [] [Var "bar"]])
+
+        it "with args" $ do
+            parsePython "def fancyFunc(x, y, z):\n    10 * 10\n    foo" `shouldBe` Right (Start [Function "fancyFunc" ["x", "y", "z"] [Arith '*' (Num "10") (Num "10"), Var "foo"]])
+
+        it "with return statement" $ do
+            parsePython "def foo():\n    return 100" `shouldBe` Right (Start [Function "foo" [] [Return (Num "100")]])
+
+        it "function in a function" $ do
+            parsePython "def foo():\n    def bar():\n        return x * 10\n    funVar\n    return bar(funVar)" `shouldBe`
+                Right (Start [Function "foo" [] [Function "bar" [] [Return (Arith '*' (Var "x") (Num "10"))], Var "funVar", Return (Call "bar" [Var "funVar"])]])
+
+        it "function in a function with args" $ do
+            parsePython "def foo(_first_):\n    def bar(y, z):\n        return x * 10\n    funVar\n    return bar(funVar)" `shouldBe`
+                Right (Start [Function "foo" ["_first_"] [Function "bar" ["y", "z"] [Return (Arith '*' (Var "x") (Num "10"))], Var "funVar", Return (Call "bar" [Var "funVar"])]])
+
     describe "errors" $ do
         it "needlessly indented statement" $ do
             parsePython " 1 + 2" `shouldSatisfy` isLeft
@@ -245,4 +263,13 @@ main = hspec $ describe "Python parser tests" $ do
 
         it "only else" $ do
             parsePython "else:\n    frobble" `shouldSatisfy` isLeft
+
+        it "empty for" $ do
+            parsePython "for x in xs:" `shouldSatisfy` isLeft
+
+        it "empty while" $ do
+            parsePython "while True:" `shouldSatisfy` isLeft
+
+        it "empty function" $ do
+            parsePython "def foo():" `shouldSatisfy` isLeft
 
