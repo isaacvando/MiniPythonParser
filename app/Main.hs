@@ -14,6 +14,7 @@ main = do
             createDirectoryIfMissing False "parseTree"
             writeFile "parseTree/tree.tex" (getTree result)
 
+-- TODO: use Text.LaTeX instead
 getTree :: Content -> String
 getTree (Start xs) = foldr (\x acc -> case x of '_' -> '\\':'_':acc; y -> y:acc) "" (start xs)
     where start ys = "\\documentclass[]{article}\n\\usepackage{tikz-qtree}\n\\usepackage[T1]{fontenc}\n\\usepackage{incgraph}\n\n\\begin{document}\n"

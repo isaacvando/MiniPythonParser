@@ -97,12 +97,12 @@ ifStatement i = do
         stmts <- getBlock
         return $ If cond stmts)
     elifExps <- many (try $ do
-        void $ string indent *> string "elif" *> hspace -- TODO: this is a bad temp solution
+        void $ string indent *> string "elif" *> hspace
         cond <- getCond
         stmts <- getBlock
         return $ Elif cond stmts)
     elseExp <- optional (try $ do
-        void $ string indent *> string "else:" <* hspace <* eol -- TODO: this is a bad temp solution
+        void $ string indent *> string "else:" <* hspace <* eol
         stmts <- getBlock
         return $ Else stmts)
     return $ IfStatement $ ifExp:elifExps ++ case elseExp of Nothing -> []; Just x -> [x]
