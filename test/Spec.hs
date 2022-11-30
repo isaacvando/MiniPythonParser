@@ -87,9 +87,6 @@ main = hspec $ describe "Python parser tests" $ do
         it "_ is a valid variable name" $ do
             parsePython "_" `shouldBe` Right (Start [Var "_"])
 
-        it "variable names may not be reserved words" $ do
-            parsePython "if" `shouldSatisfy` isLeft
-
         it "basic assignment" $ do
             parsePython "foo = 10.7" `shouldBe` Right (Start [Assign "=" (Var "foo") (Num "10.7")])
 
@@ -102,11 +99,20 @@ main = hspec $ describe "Python parser tests" $ do
         it "variable set to variable" $ do
             parsePython "y = z" `shouldBe` Right (Start [Assign "=" (Var "y") (Var "z")])
 
+        it "variable that looks like a boolean" $ do
+            parsePython "foo = Truee" `shouldBe` Right (Start [Assign "=" (Var "foo") (Var "Truee")])
+
         it "variable set to complex expression containing variables" $ do
             parsePython "lambda *= x * 6 % z" `shouldBe` Right (Start [Assign "*=" (Var "lambda") (Arith '*' (Var "x") (Arith '%' (Num "6") (Var "z")))])
 
         it "variable set to function call" $ do
             parsePython "foo = isPequalNP()" `shouldBe` Right (Start [Assign "=" (Var "foo") (Call "isPequalNP" [])])
+
+        it "variable set to boolean" $ do
+            parsePython "x = True" `shouldBe` Right (Start [Assign "=" (Var "x") (Bool "True")])
+
+        it "variable set to conditional" $ do
+            parsePython "foo = x and y" `shouldBe` Right (Start [Assign "=" (Var "foo") (Cond "and" (Var "x") (Var "y"))])
 
     describe "conditional" $ do
         it "boolean literal" $ do
@@ -261,6 +267,12 @@ main = hspec $ describe "Python parser tests" $ do
         it "variable beginning with a number is invalid" $ do
             parsePython "89badvar" `shouldSatisfy` isLeft
 
+        it "variable names may not be reserved words" $ do
+            parsePython "if" `shouldSatisfy` isLeft
+
+        it "only variables can be assigned values" $ do
+            parsePython "foo() = bar" `shouldSatisfy` isLeft
+
         it "only elif" $ do
             parsePython "elif False:\n    foo" `shouldSatisfy` isLeft
 
@@ -275,4 +287,3 @@ main = hspec $ describe "Python parser tests" $ do
 
         it "empty function" $ do
             parsePython "def foo():" `shouldSatisfy` isLeft
-

@@ -1,9 +1,8 @@
-module ParsePython where
+module ParsePython (parsePython, Content(..)) where
 
 -- TODO: refactor to use Text.Megaparsec.Char.Lexer
 import Text.Megaparsec
 import Text.Megaparsec.Char
--- import Text.Megaparsec.Debug (dbg)
 import Data.Void (Void)
 import Control.Monad (void, when)
 import Data.Char (isSpace)
@@ -90,15 +89,6 @@ argument = kwarg <|> try call <|> try arithmetic <|> conditional <?> "function a
             arg <- try call <|> try arithmetic <|> conditional <?> "keyword function argument"
             return $ Kwarg name arg
 
-conditional :: Parser Content
-conditional = try (char '(' *> hspace *> conditional <* hspace <* char ')')
-    <|> try (do
-    p1 <- (bool <|> arithmetic) <* hspace
-    op <- condOperator <* hspace
-    p2 <- bool <|> arithmetic
-    return $ Cond op p1 p2)
-    <|> bool 
-
 ifStatement :: Int -> Parser Content
 ifStatement i = do
     ifExp <- try (do 
@@ -138,15 +128,24 @@ assignment :: Parser Content
 assignment = do
     v <- variable <* hspace
     op <- assignOperator <* hspace
-    ex <- try arithmetic <|> variable
+    ex <- try conditional <|> arithmetic
     return $ Assign op v ex
+
+conditional :: Parser Content
+conditional = try (char '(' *> hspace *> conditional <* hspace <* char ')')
+    <|> try (do
+        p1 <- (try arithmetic <|> bool) <* hspace
+        op <- condOperator <* hspace
+        p2 <- try arithmetic <|> bool
+        return $ Cond op p1 p2)
+    <|> bool <* notFollowedBy alphaNumChar -- this ensures that a variable name like Truee is parsed correctly
 
 arithmetic :: Parser Content
 arithmetic = try (do
-    a1 <- (arithWithParens <|> number <|> try call <|> variable) <* hspace
-    op <- arithOperator <* hspace
-    a2 <- arithmetic
-    return $ Arith op a1 a2)
+        a1 <- (arithWithParens <|> number <|> try call <|> variable) <* hspace
+        op <- arithOperator <* hspace
+        a2 <- arithmetic
+        return $ Arith op a1 a2)
     <|> arithWithParens
     <|> number
     <|> try call

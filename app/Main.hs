@@ -10,21 +10,22 @@ main = do
     case parsePython contents of
         Left parseError -> putStrLn parseError
         Right result -> do
-            putStrLn $ "\nResult:\n" ++ show result
+            putStrLn $ "Result:\n" ++ show result
             createDirectoryIfMissing False "parseTree"
             writeFile "parseTree/tree.tex" (getTree result)
 
 getTree :: Content -> String
-getTree (Start xs) = "\\documentclass[a4paper]{article}\n\\usepackage{tikz-qtree}\n\\usepackage{geometry}\n\\geometry{margin=0.5in}\n\n\\begin{document}\n\\begin{center}\n"
-    ++ concat (map (\x -> "    \\Tree " ++ getTree x ++ " \\\\ \\hrulefill \\\\ \n") xs) ++ "\\end{center}\n\\end{document}\n"
+getTree (Start xs) = foldr (\x acc -> case x of '_' -> '\\':'_':acc; y -> y:acc) "" (start xs)
+    where start ys = "\\documentclass[]{article}\n\\usepackage{tikz-qtree}\n\\usepackage[T1]{fontenc}\n\\usepackage{incgraph}\n\n\\begin{document}\n"
+            ++ concat (map (\y -> "    \\begin{inctext} \\Tree " ++ getTree y ++ " \\end{inctext} \n") ys) ++ "\\end{document}\n"
 getTree (Var st) = [i|[.{Var #{st}} ]|]
 getTree (Num st) = [i|[.{Num #{st}} ]|]
 getTree (Bool st) = [i|[.{Bool #{st}} ]|]
 getTree (Arith op left right) = let normed = case op of '%' -> "\\%"; x -> [x] in
     [i|[.{Arith #{normed}} #{getTree left} #{getTree right} ]|]
 getTree (Assign op left right) = [i|[.{Assign #{op}}  #{getTree left} #{getTree right} ]|]
-getTree (Cond op left right) = [i|[.{Condition #{op}}  #{getTree left} #{getTree right} ]|]
-getTree (IfStatement xs) = [i|[.IfStatement #{concat (map getTree xs)}]|]
+getTree (Cond op left right) = [i|[.{Conditional #{op}}  #{getTree left} #{getTree right} ]|]
+getTree (IfStatement xs) = [i|[.{If Statement} #{concat (map getTree xs)}]|]
 getTree (If cond body) = [i|[.If [.Condition #{getTree cond} ] [.Body #{concat (map getTree body)}] ] |]
 getTree (Elif cond body) = [i|[.{Else If} [.Condition #{getTree cond} ] [.Body #{concat (map getTree body)}] ] |]
 getTree (Else body) = [i|[.Else [.Body #{concat (map getTree body)}] ] |]
