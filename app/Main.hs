@@ -1,10 +1,8 @@
 module Main (main) where
 
 import ParsePython
-import System.IO
 import System.Directory
 import Data.String.Interpolate (i)
-import Data.List (concat)
 
 main :: IO ()
 main = do
@@ -16,15 +14,9 @@ main = do
             createDirectoryIfMissing False "parseTree"
             writeFile "parseTree/tree.tex" (getTree result)
 
-prompt :: String -> IO String
-prompt text = do
-    putStr text
-    hFlush stdout
-    getLine
-
 getTree :: Content -> String
-getTree (Start xs) = "\\documentclass[a4paper, landscape]{article}\n\\usepackage{qtree}\n\\usepackage{geometry}\n\\geometry{margin=0.5in}\n\n\\begin{document}\n    \\Tree [.Start "
-    ++ concat (map (\x -> " " ++ getTree x ++ " ") xs) ++ "]\n\\end{document}\n"
+getTree (Start xs) = "\\documentclass[a4paper]{article}\n\\usepackage{tikz-qtree}\n\\usepackage{geometry}\n\\geometry{margin=0.5in}\n\n\\begin{document}\n\\begin{center}\n"
+    ++ concat (map (\x -> "    \\Tree " ++ getTree x ++ " \\\\ \\hrulefill \\\\ \n") xs) ++ "\\end{center}\n\\end{document}\n"
 getTree (Var st) = [i|[.{Var #{st}} ]|]
 getTree (Num st) = [i|[.{Num #{st}} ]|]
 getTree (Bool st) = [i|[.{Bool #{st}} ]|]
@@ -42,24 +34,3 @@ getTree (Call name args) = [i|[.{Function Call} [.Name #{name} ] [.Args #{concat
 getTree (Kwarg name arg) = [i|[.{Keyword Arg} [.Name #{name} ] [.Arg #{getTree arg} ] ] |]
 getTree (Function name args body) = [i|[.Function [.Name #{name} ] [.Arguments #{unwords args} ] [.Body #{concat (map getTree body)}] ] |]
 getTree (Return val) = [i|[.Return #{getTree val} ] |]
-
-
-
--- data Content = Start [Content]
---     | Var String
---     | Num String
---     | Bool String
---     | Arith Char Content Content
---     | Assign String Content Content
---     | Cond String Content Content
---     | IfStatement [Content]
---     | If Content [Content]
---     | Elif Content [Content]
---     | Else [Content]
---     | For Content Content [Content]
---     | While Content [Content]
---     | Call String [Content]
---     | Kwarg String Content
---     | Function String [String] [Content]
---     | Return Content
---     deriving (Show, Eq)
